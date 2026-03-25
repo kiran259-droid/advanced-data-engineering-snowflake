@@ -1,0 +1,41 @@
+name: Restore fix-missing-data branch
+
+on:
+  push:
+    branches:
+      - copilot/restore-fix-missing-data
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create fix-missing-data branch at last known commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHA="b7bf921b2ed42c51c7b31ace98463556063079e9"
+          BRANCH="fix-missing-data"
+          REPO="${{ github.repository }}"
+
+          # Check if branch already exists
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/git/ref/heads/$BRANCH")
+
+          if [ "$STATUS" = "200" ]; then
+            echo "Branch '$BRANCH' already exists — nothing to do."
+          else
+            echo "Creating branch '$BRANCH' at $SHA …"
+            curl -s -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$REPO/git/refs" \
+              -d "{\"ref\":\"refs/heads/$BRANCH\",\"sha\":\"$SHA\"}"
+            echo ""
+            echo "Branch '$BRANCH' created."
+          fi
